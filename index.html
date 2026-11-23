@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123d2b">
+  <meta name="description" content="Consulta y compara precios agrícolas por producto y región del Perú.">
+  <title>AgroPrecios Perú | Inteligencia agrícola</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#inicio"><span class="brand-mark">A<span>+</span></span><span><strong>AgroPrecios</strong><small>PERÚ · INTELIGENCIA AGRÍCOLA</small></span></a>
+    <div class="side-label">MENÚ PRINCIPAL</div>
+    <nav class="side-nav">
+      <a class="nav-link active" href="#inicio"><span>⌂</span> Panel general</a>
+      <a class="nav-link" href="#consulta"><span>⌕</span> Consultar precios</a>
+      <a class="nav-link" href="#comparar"><span>⇄</span> Comparar regiones</a>
+      <a class="nav-link" href="#historial"><span>◔</span> Historial <em>VIP</em></a>
+      <a class="nav-link vip-nav" href="#planes"><span>✦</span> Planes</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="help-card"><div class="help-icon">?</div><strong>¿Necesitas ayuda?</strong><p>Conoce cómo interpretar los precios y sus fuentes.</p><a href="#fuentes">Ver información →</a></div>
+      <div class="side-user"><div class="avatar" id="userAvatar">AP</div><div class="user-meta"><strong id="userName">Invitado</strong><small id="userPlan">Plan gratuito</small></div><button class="icon-btn" id="authButton" title="Iniciar sesión">↗</button></div>
+    </div>
+  </aside>
+
+  <main class="main-content" id="inicio">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu" aria-label="Abrir menú">☰</button>
+      <div class="breadcrumb">Inicio <span>/</span> <strong>Panel general</strong></div>
+      <div class="top-actions">
+        <span class="data-status"><i></i> <span id="lastUpdate">Cargando…</span></span>
+        <button class="btn btn-outline btn-small" id="topLogin">Iniciar sesión</button>
+        <button class="btn btn-dark btn-small" id="topVip">✦ Conocer VIP</button>
+      </div>
+    </header>
+
+    <div class="signup-strip" id="signupStrip">
+      <div><strong>Regístrate gratis con tu Gmail en 1 clic</strong><p>Guarda tu acceso y desbloquea tu cuenta. Sin formularios ni contraseñas.</p></div>
+      <button class="btn" id="googleLogin2"><span class="google-g" style="background:#fff;border-radius:50%;padding:0 5px">G</span> Continuar con Google</button>
+    </div>
+
+    <section class="welcome-section">
+      <div>
+        <div class="eyebrow"><span></span> INFORMACIÓN PARA EL AGRO PERUANO</div>
+        <h1>Decide mejor.<br><span>Comercializa mejor.</span></h1>
+        <p class="welcome-copy">Consulta y compara precios agrícolas por región, con datos del SISAP–MIDAGRI actualizados automáticamente.</p>
+        <div class="welcome-actions"><a href="#consulta" class="btn btn-lime">Consultar precios <b>→</b></a><a href="#historial" class="text-link">Ver historial <span>↗</span></a></div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-leaf">✳</div>
+        <div class="hero-card"><span class="hero-card-label">MERCADO AGRÍCOLA</span><strong>Información<br>que impulsa<br>el campo.</strong><div class="hero-card-bottom"><span>PERÚ</span><span>● ● ●</span></div></div>
+        <div class="floating-tag"><span>✦</span> Datos para decidir</div>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <article class="stat-card"><div class="stat-top"><span>PRODUCTOS</span><span class="stat-icon">▦</span></div><strong id="statProducts">—</strong><small>En la base de consulta</small></article>
+      <article class="stat-card"><div class="stat-top"><span>REGIONES</span><span class="stat-icon">⌖</span></div><strong id="statRegions">—</strong><small>Del territorio peruano</small></article>
+      <article class="stat-card"><div class="stat-top"><span>REGISTROS</span><span class="stat-icon">▤</span></div><strong id="statRecords">—</strong><small>Incluye registros sin dato</small></article>
+      <article class="stat-card stat-highlight"><div class="stat-top"><span>ACCESO VIP</span><span class="stat-icon">✦</span></div><strong>Historial de 2 años</strong><small>Tendencias y comparación</small><a href="#planes">Descubrir beneficios →</a></article>
+    </section>
+
+    <section class="content-section" id="consulta">
+      <div class="section-heading"><div><div class="eyebrow">EXPLORA LA INFORMACIÓN</div><h2>Consulta de precios</h2><p>Selecciona producto, región y tipo de precio.</p></div><span class="record-count" id="resultCount">Cargando datos…</span></div>
+      <div class="filter-panel">
+        <label>Producto<select id="productFilter"></select></label>
+        <label>Región<select id="regionFilter"></select></label>
+        <label>Tipo de precio<select id="typeFilter"></select></label>
+        <button class="btn btn-dark filter-button" id="clearFilters">Limpiar filtros</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>PRODUCTO</th><th>REGIÓN</th><th>PRECIO</th><th>TIPO</th><th>FECHA / PERIODO</th><th>ESTADO</th></tr></thead>
+        <tbody id="priceTable"><tr><td colspan="6" class="empty-cell">Cargando registros…</td></tr></tbody>
+      </table></div>
+      <p class="data-note">Un registro sin precio no se interpreta como S/ 0.00. Cada registro conserva su fecha y fuente.</p>
+    </section>
+
+    <section class="two-column content-section" id="comparar">
+      <article class="panel chart-panel">
+        <div class="panel-heading"><div><div class="eyebrow">COMPARACIÓN REGIONAL</div><h2>Precios por región</h2></div><span class="mini-pill">Gratis</span></div>
+        <label class="compact-label">Producto<select id="chartProduct"></select></label>
+        <div class="chart-container"><canvas id="priceChart"></canvas></div>
+        <p class="chart-footnote">Promedio de variedades con precio numérico. Revisa fecha y estado antes de comparar.</p>
+      </article>
+      <article class="panel insight-panel">
+        <div class="eyebrow">LECTURA RÁPIDA</div><h2>¿Qué nos dicen los datos?</h2>
+        <div id="quickInsight" class="insight-body"></div>
+        <div class="insight-divider"></div>
+        <div class="insight-tip"><span>✦</span><p><strong>Consejo:</strong> compara siempre precios del mismo tipo y considera la fecha.</p></div>
+      </article>
+    </section>
+
+    <section class="content-section" id="historial">
+      <div class="section-heading"><div><div class="eyebrow">EVOLUCIÓN DE PRECIOS</div><h2>Historial y tendencias</h2><p>Gratis: últimos 30 días. VIP: hasta 2 años y comparación entre regiones.</p></div><span class="mini-pill" id="planPill">Plan gratis</span></div>
+      <div class="panel">
+        <div class="history-controls">
+          <label>Producto<select id="hProduct"></select></label>
+          <label>Región<select id="hRegion"></select></label>
+          <label>Comparar con (VIP)<select id="hRegion2"></select></label>
+          <label>Tipo<select id="hType"></select></label>
+          <label>Periodo<select id="hRange">
+            <option value="30">Últimos 30 días</option>
+            <option value="90">🔒 3 meses</option>
+            <option value="365">🔒 1 año</option>
+            <option value="730">🔒 2 años</option>
+          </select></label>
+        </div>
+        <div class="chart-container" style="height:280px"><canvas id="histChart"></canvas></div>
+        <div class="hist-stats" id="histStats"></div>
+        <div class="lock-note" id="lockNote">🔒 Con VIP desbloqueas 3 meses, 1 año y 2 años de historial, comparación entre regiones y descarga en CSV. <a id="lockVip">Conocer VIP</a></div>
+        <button class="btn btn-outline btn-small" id="hCsv" style="margin-top:12px">⬇ Descargar CSV (VIP)</button>
+      </div>
+    </section>
+
+    <section class="vip-banner content-section" id="analisis">
+      <div class="vip-decoration">✳</div>
+      <div class="vip-banner-copy"><span class="vip-kicker">AGROPRECIOS VIP</span><h2>Del dato a la oportunidad.</h2><p>Estudia la evolución de precios hasta 2 años atrás y compara regiones.</p></div>
+      <div class="vip-features"><span>✓ Historial hasta 2 años</span><span>✓ Comparar regiones</span><span>✓ Descarga CSV</span></div>
+      <button class="btn btn-lime" id="bannerVip">Conocer membresía <b>→</b></button>
+    </section>
+
+    <section class="content-section plans-section" id="planes">
+      <div class="section-heading centered-heading"><div><div class="eyebrow">ELIGE CÓMO QUIERES ANALIZAR</div><h2>Un plan para cada necesidad</h2><p>Comienza gratis y amplía cuando lo necesites.</p></div></div>
+      <div class="plans-grid">
+        <article class="plan-card"><span class="plan-label">ESENCIAL</span><h3>Gratis</h3><p class="plan-description">Para consultar información básica.</p><div class="plan-price">S/ 0 <small>/ siempre</small></div><ul><li>Consulta de precios actuales</li><li>Filtros por producto y región</li><li>Gráfico regional</li><li>Historial de 30 días</li></ul><button class="btn btn-outline full-btn" id="freePlanBtn">Continuar gratis</button></article>
+        <article class="plan-card premium-plan"><div class="popular-tag">POPULAR</div><span class="plan-label">AGROPRECIOS VIP</span><h3>VIP mensual</h3><p class="plan-description">Para analizar con frecuencia.</p><div class="plan-price">S/ 7 <small>/ mes</small></div><ul><li>Todo lo de Gratis</li><li>Historial de 3 meses a 2 años</li><li>Comparar regiones</li><li>Descarga CSV</li></ul><button class="btn btn-dark full-btn vipCheckout" data-plan="monthly">Elegir VIP mensual</button></article>
+        <article class="plan-card"><span class="plan-label">AGROPRECIOS VIP</span><h3>VIP anual</h3><p class="plan-description">Acceso todo el año.</p><div class="plan-price">S/ 70 <small>/ año</small></div><div class="saving">Ahorras S/ 14 frente al mensual</div><ul><li>Todos los beneficios VIP</li><li>12 meses de acceso</li><li>Equivale a S/ 5.83 por mes</li></ul><button class="btn btn-lime full-btn vipCheckout" data-plan="annual">Elegir VIP anual</button></article>
+      </div>
+    </section>
+
+    <section class="sources-section content-section" id="fuentes"><div><div class="eyebrow">TRANSPARENCIA</div><h2>Conoce el origen de los datos</h2><p>Los precios provienen del SISAP–MIDAGRI (mercados mayoristas y minoristas) y se actualizan automáticamente cada día. Cada registro muestra su fecha de último reporte. Verifica antes de usarlos como referencia comercial.</p></div><div class="source-chip">SISAP – MIDAGRI</div></section>
+    <footer><a class="footer-brand" href="#inicio">AgroPrecios Perú</a><span>Información agrícola para tomar mejores decisiones.</span><span>© 2026 AgroPrecios Perú</span></footer>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="authModal" hidden><div class="modal">
+  <button class="modal-close" data-close="authModal" aria-label="Cerrar">×</button>
+  <div class="modal-logo">A<span>+</span></div><div class="eyebrow">BIENVENIDO</div><h2>Accede a tu cuenta</h2>
+  <p>Entra con tu Gmail en un clic.</p>
+  <button class="btn google-btn" id="googleLogin"><span class="google-g">G</span> Continuar con Google</button>
+  <p class="modal-foot" id="authMessage"></p>
+</div></div>
+<div class="modal-backdrop" id="vipModal" hidden><div class="modal">
+  <button class="modal-close" data-close="vipModal" aria-label="Cerrar">×</button>
+  <div class="modal-logo">✦</div><div class="eyebrow">AGROPRECIOS VIP</div><h2>Más historial. Mejores decisiones.</h2>
+  <p>Historial de hasta 2 años, comparación entre regiones y descarga CSV.</p>
+  <div class="modal-plan-row"><span>VIP mensual</span><strong>S/ 7</strong></div>
+  <div class="modal-plan-row"><span>VIP anual</span><strong>S/ 70</strong></div>
+  <p class="modal-foot" id="paymentMessage"></p>
+  <button class="btn btn-lime full-btn vipCheckout" data-plan="monthly" style="margin-bottom:8px">Pagar VIP mensual</button>
+  <button class="btn btn-dark full-btn vipCheckout" data-plan="annual">Pagar VIP anual</button>
+</div></div>
+<script src="app.js"></script>
+</body>
+</html>
