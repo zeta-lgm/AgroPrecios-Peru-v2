@@ -1,0 +1,32 @@
+name: Actualizar precios
+on:
+  schedule:
+    - cron: "0 12 * * *"   # todos los días, 7:00 a. m. hora de Lima
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: "Días hacia atrás a descargar (30 normal; hasta 730 para llenar el historial)"
+        default: "30"
+permissions:
+  contents: write
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install cheerio@1.0.0
+      - run: node actualizar.mjs
+        env:
+          DIAS: ${{ inputs.dias || '30' }}
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add precios.json historial.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Actualizar precios"
+            git push
+          fi
