@@ -20,3 +20,8 @@
 .lock-note{font-size:10px;color:#93651a;background:#fff2db;border-radius:8px;padding:10px 12px;margin-top:12px}
 .lock-note a{font-weight:700;text-decoration:underline;cursor:pointer}
 @media(max-width:800px){.history-controls{grid-template-columns:1fr 1fr}.hist-stats{grid-template-columns:1fr 1fr}.signup-strip{flex-direction:column;align-items:flex-start}}
+.email-row{display:flex;gap:8px;align-items:center}
+.email-row input{flex:1;min-width:190px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:11px;background:#fff;color:var(--ink)}
+.signup-strip .email-row{min-width:340px}
+.signup-strip .email-row .btn{background:var(--forest);color:#fff}
+@media(max-width:800px){.signup-strip .email-row{min-width:0;width:100%}}

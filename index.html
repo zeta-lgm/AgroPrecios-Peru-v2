@@ -22,6 +22,7 @@
       <a class="nav-link" href="#consulta"><span>⌕</span> Consultar precios</a>
       <a class="nav-link" href="#comparar"><span>⇄</span> Comparar regiones</a>
       <a class="nav-link" href="#historial"><span>◔</span> Historial <em>VIP</em></a>
+      <a class="nav-link" href="#asistente"><span>✧</span> Asistente</a>
       <a class="nav-link vip-nav" href="#planes"><span>✦</span> Planes</a>
     </nav>
     <div class="sidebar-bottom">
@@ -42,8 +43,8 @@
     </header>
 
     <div class="signup-strip" id="signupStrip">
-      <div><strong>Regístrate gratis con tu Gmail en 1 clic</strong><p>Guarda tu acceso y desbloquea tu cuenta. Sin formularios ni contraseñas.</p></div>
-      <button class="btn" id="googleLogin2"><span class="google-g" style="background:#fff;border-radius:50%;padding:0 5px">G</span> Continuar con Google</button>
+      <div><strong>Regístrate gratis con tu Gmail</strong><p id="stripMsg">Escribe tu Gmail y te enviamos un enlace para entrar. Sin contraseñas.</p></div>
+      <div class="email-row"><input type="email" id="stripEmail" placeholder="tucorreo@gmail.com" autocomplete="email"><button class="btn" id="stripBtn">Entrar</button></div>
     </div>
 
     <section class="welcome-section">
@@ -119,10 +120,19 @@
       </div>
     </section>
 
+    <section class="content-section" id="asistente">
+      <div class="section-heading"><div><div class="eyebrow">ASISTENTE</div><h2>🤖 Asistente AgroPrecios</h2><p>Pregunta por precios actuales. Las preguntas de tendencia e historial son VIP.</p></div><span class="mini-pill">Gratis + VIP</span></div>
+      <div class="panel">
+        <div class="email-row"><input type="text" id="aiQ" placeholder="Ej.: ¿Cuál es el precio mayorista más alto de papa en Puno?"><button class="btn btn-dark" id="aiBtn">Preguntar</button></div>
+        <p id="aiA" class="insight-body" style="min-height:40px;margin-bottom:0" aria-live="polite"></p>
+        <p class="data-note">Ejemplos: «papa más barata», «promedio de arroz minorista», y en VIP: «tendencia de tomate en Ica».</p>
+      </div>
+    </section>
+
     <section class="vip-banner content-section" id="analisis">
       <div class="vip-decoration">✳</div>
       <div class="vip-banner-copy"><span class="vip-kicker">AGROPRECIOS VIP</span><h2>Del dato a la oportunidad.</h2><p>Estudia la evolución de precios hasta 2 años atrás y compara regiones.</p></div>
-      <div class="vip-features"><span>✓ Historial hasta 2 años</span><span>✓ Comparar regiones</span><span>✓ Descarga CSV</span></div>
+      <div class="vip-features"><span>✓ Historial hasta 2 años</span><span>✓ Comparar regiones</span><span>✓ Descarga CSV</span><span>✓ Asistente con tendencias</span></div>
       <button class="btn btn-lime" id="bannerVip">Conocer membresía <b>→</b></button>
     </section>
 
@@ -130,7 +140,7 @@
       <div class="section-heading centered-heading"><div><div class="eyebrow">ELIGE CÓMO QUIERES ANALIZAR</div><h2>Un plan para cada necesidad</h2><p>Comienza gratis y amplía cuando lo necesites.</p></div></div>
       <div class="plans-grid">
         <article class="plan-card"><span class="plan-label">ESENCIAL</span><h3>Gratis</h3><p class="plan-description">Para consultar información básica.</p><div class="plan-price">S/ 0 <small>/ siempre</small></div><ul><li>Consulta de precios actuales</li><li>Filtros por producto y región</li><li>Gráfico regional</li><li>Historial de 30 días</li></ul><button class="btn btn-outline full-btn" id="freePlanBtn">Continuar gratis</button></article>
-        <article class="plan-card premium-plan"><div class="popular-tag">POPULAR</div><span class="plan-label">AGROPRECIOS VIP</span><h3>VIP mensual</h3><p class="plan-description">Para analizar con frecuencia.</p><div class="plan-price">S/ 7 <small>/ mes</small></div><ul><li>Todo lo de Gratis</li><li>Historial de 3 meses a 2 años</li><li>Comparar regiones</li><li>Descarga CSV</li></ul><button class="btn btn-dark full-btn vipCheckout" data-plan="monthly">Elegir VIP mensual</button></article>
+        <article class="plan-card premium-plan"><div class="popular-tag">POPULAR</div><span class="plan-label">AGROPRECIOS VIP</span><h3>VIP mensual</h3><p class="plan-description">Para analizar con frecuencia.</p><div class="plan-price">S/ 7 <small>/ mes</small></div><ul><li>Todo lo de Gratis</li><li>Historial de 3 meses a 2 años</li><li>Comparar regiones</li><li>Descarga CSV</li><li>Asistente: tendencias</li></ul><button class="btn btn-dark full-btn vipCheckout" data-plan="monthly">Elegir VIP mensual</button></article>
         <article class="plan-card"><span class="plan-label">AGROPRECIOS VIP</span><h3>VIP anual</h3><p class="plan-description">Acceso todo el año.</p><div class="plan-price">S/ 70 <small>/ año</small></div><div class="saving">Ahorras S/ 14 frente al mensual</div><ul><li>Todos los beneficios VIP</li><li>12 meses de acceso</li><li>Equivale a S/ 5.83 por mes</li></ul><button class="btn btn-lime full-btn vipCheckout" data-plan="annual">Elegir VIP anual</button></article>
       </div>
     </section>
@@ -143,7 +153,8 @@
 <div class="modal-backdrop" id="authModal" hidden><div class="modal">
   <button class="modal-close" data-close="authModal" aria-label="Cerrar">×</button>
   <div class="modal-logo">A<span>+</span></div><div class="eyebrow">BIENVENIDO</div><h2>Accede a tu cuenta</h2>
-  <p>Entra con tu Gmail en un clic.</p>
+  <p>Escribe tu correo y te enviamos un enlace de acceso.</p>
+  <div class="email-row" style="margin-top:14px"><input type="email" id="modalEmail" placeholder="tucorreo@gmail.com" autocomplete="email"><button class="btn btn-dark" id="modalBtn">Enviar enlace</button></div>
   <button class="btn google-btn" id="googleLogin"><span class="google-g">G</span> Continuar con Google</button>
   <p class="modal-foot" id="authMessage"></p>
 </div></div>

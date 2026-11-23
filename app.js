@@ -167,6 +167,44 @@ function checkout(plan) {
   window.open(url + (url.includes("?") ? "&" : "?") + "email=" + encodeURIComponent(user.email), "_blank");
 }
 
+/* ---------- Acceso por correo ---------- */
+async function emailLogin(inputId, msgId) {
+  const email = $(inputId).value.trim(), msg = $(msgId);
+  if (!/^\S+@\S+\.\S+$/.test(email)) { msg.textContent = "Escribe un correo válido."; return; }
+  if (!sb) { msg.textContent = "El acceso aún no está configurado (falta Supabase en config.js)."; return; }
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+  msg.textContent = error ? error.message : "✓ Te enviamos un enlace a " + email + ". Ábrelo para entrar.";
+}
+
+/* ---------- Asistente ---------- */
+const plain = s => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+function named(field, q) {
+  return [...new Set(records.map(r => r[field]))].find(v => v && new RegExp("\\b" + plain(v) + "\\b").test(q));
+}
+function ask() {
+  const q = plain($("aiQ").value.trim()), out = $("aiA");
+  if (!q) { out.textContent = "Escribe una pregunta."; return; }
+  const prod = named("producto", q), reg = named("region", q), tipo = named("tipo", q) || (/minorista/.test(q) ? "Minorista" : /mayorista/.test(q) ? "Mayorista" : "");
+  if (/tendencia|historial|variacion|evolucion|ultimos? \d* ?(meses|anos)/.test(q)) {
+    if (!vip) { out.innerHTML = '🔒 Las respuestas de tendencia e historial son parte de VIP. <a href="#planes" style="text-decoration:underline;font-weight:700">Ver planes</a>'; return; }
+    if (!prod) { out.textContent = "Indica el producto, por ejemplo: «tendencia de papa en Puno»."; return; }
+    const by = {};
+    history.filter(h => h.p === prod && (!reg || h.r === reg) && h.t === (tipo || "Mayorista")).forEach(h => (by[h.d] ||= []).push(h.x));
+    const s = Object.entries(by).sort().map(([d, a]) => [d, a.reduce((x, y) => x + y, 0) / a.length]);
+    if (s.length < 2) { out.textContent = "Aún no hay suficiente historial para esa consulta."; return; }
+    const first = s[0], last = s.at(-1), ch = (last[1] - first[1]) / first[1] * 100;
+    out.textContent = `${prod}${reg ? " en " + reg : ""} (${tipo || "Mayorista"}): de ${money(first[1])} el ${first[0]} a ${money(last[1])} el ${last[0]} (${ch >= 0 ? "+" : ""}${ch.toFixed(1)}%). Mín ${money(Math.min(...s.map(x => x[1])))}, máx ${money(Math.max(...s.map(x => x[1])))}.`;
+    return;
+  }
+  let d = records.filter(r => num(r.precio) && (!prod || r.producto === prod) && (!reg || r.region === reg) && (!tipo || r.tipo === tipo));
+  if (!d.length) { out.textContent = "No encontré precios numéricos para esa pregunta."; return; }
+  const fmtR = r => `${money(r.precio)} en ${r.region} (${r.producto}${r.variedad ? " " + r.variedad : ""}, ${r.tipo}, ${r.fecha || "sin fecha"})`;
+  if (/alto|\bmayor\b|mas caro/.test(q)) out.textContent = "El precio más alto: " + fmtR(d.reduce((a, b) => a.precio > b.precio ? a : b));
+  else if (/bajo|menor|mas barat/.test(q)) out.textContent = "El precio más bajo: " + fmtR(d.reduce((a, b) => a.precio < b.precio ? a : b));
+  else if (/promedio/.test(q)) out.textContent = `Promedio de ${d.length} registros: ${money(d.reduce((s, r) => s + Number(r.precio), 0) / d.length)}. Puede mezclar fechas y tipos.`;
+  else out.textContent = "Puedes preguntar por el precio más alto, más bajo o el promedio, indicando producto, región o tipo (mayorista/minorista).";
+}
+
 /* ---------- UI ---------- */
 function openModal(id) { $(id).hidden = false; }
 function closeModal(id) { $(id).hidden = true; }
@@ -194,7 +232,10 @@ async function boot() {
   $("topLogin").addEventListener("click", () => openModal("authModal"));
   $("authButton").addEventListener("click", async () => { if (user && sb) { await sb.auth.signOut(); setUser(null); await loadMembership(); } else openModal("authModal"); });
   $("googleLogin").addEventListener("click", login);
-  $("googleLogin2").addEventListener("click", login);
+  $("stripBtn").addEventListener("click", () => emailLogin("stripEmail", "stripMsg"));
+  $("modalBtn").addEventListener("click", () => emailLogin("modalEmail", "authMessage"));
+  $("aiBtn").addEventListener("click", ask);
+  $("aiQ").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
   $("hCsv").addEventListener("click", downloadCsv);
   $("freePlanBtn").addEventListener("click", () => scrollTo({ top: 0, behavior: "smooth" }));
   document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.dataset.close)));
