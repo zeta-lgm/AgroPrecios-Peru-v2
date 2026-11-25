@@ -37,6 +37,7 @@
       <div class="breadcrumb">Inicio <span>/</span> <strong>Panel general</strong></div>
       <div class="top-actions">
         <span class="data-status"><i></i> <span id="lastUpdate">Cargando…</span></span>
+        <button class="user-chip" id="userChip" hidden title="Mi cuenta"><span class="chip-avatar" id="chipAvatar">A</span><span class="chip-name" id="chipName"></span><span class="chip-badge" id="chipBadge">Gratis</span></button>
         <button class="btn btn-outline btn-small" id="topLogin">Iniciar sesión</button>
         <button class="btn btn-dark btn-small" id="topVip">✦ Conocer VIP</button>
       </div>
@@ -44,8 +45,10 @@
 
     <div class="signup-strip" id="signupStrip">
       <div><strong>Regístrate gratis con tu Gmail</strong><p id="stripMsg">Escribe tu Gmail y te enviamos un enlace para entrar. Sin contraseñas.</p></div>
-      <div class="email-row"><input type="email" id="stripEmail" placeholder="tucorreo@gmail.com" autocomplete="email"><button class="btn" id="stripBtn">Entrar</button></div>
+      <div class="email-row"><input type="email" id="stripEmail" placeholder="tucorreo@gmail.com" autocomplete="email"><button class="btn" id="stripBtn">Entrar</button><button class="btn" id="googleLogin2" title="Continuar con Google" style="background:#fff;color:#26332a;border:1px solid var(--line)"><span class="google-g">G</span> Google</button></div>
     </div>
+
+    <div class="vip-status" id="vipStatus" hidden></div>
 
     <section class="welcome-section">
       <div>
@@ -167,6 +170,27 @@
   <p class="modal-foot" id="paymentMessage"></p>
   <button class="btn btn-lime full-btn vipCheckout" data-plan="monthly" style="margin-bottom:8px">Pagar VIP mensual</button>
   <button class="btn btn-dark full-btn vipCheckout" data-plan="annual">Pagar VIP anual</button>
+</div></div>
+<div class="modal-backdrop" id="accountModal" hidden><div class="modal">
+  <button class="modal-close" data-close="accountModal" aria-label="Cerrar">×</button>
+  <div class="modal-logo" id="accAvatar">A</div><div class="eyebrow">MI CUENTA</div><h2 id="accName">—</h2>
+  <div class="modal-plan-row"><span>Correo</span><strong id="accEmail" style="font-size:11px">—</strong></div>
+  <div class="modal-plan-row"><span>Plan</span><strong id="accPlan">—</strong></div>
+  <div class="modal-plan-row"><span>Vence</span><strong id="accVence" style="font-size:12px">—</strong></div>
+  <button class="btn btn-lime full-btn" id="accVip" style="margin-top:16px">Conocer VIP</button>
+  <button class="btn btn-outline full-btn" id="accLogout" style="margin-top:8px">Cerrar sesión</button>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+<div class="modal-backdrop" id="yapeModal" hidden><div class="modal">
+  <button class="modal-close" data-close="yapeModal" aria-label="Cerrar">×</button>
+  <div class="modal-logo">Y</div><div class="eyebrow">PAGO CON YAPE</div><h2 id="yapeTitle">Plan VIP</h2>
+  <img id="yapeQr" src="yape-qr.png" alt="QR de Yape" style="width:100%;max-width:210px;margin:8px auto 4px;display:block;border-radius:12px" onerror="this.style.display='none'">
+  <div class="modal-plan-row"><span>Yapea al</span><strong id="yapeNum">—</strong></div>
+  <div class="modal-plan-row"><span>A nombre de</span><strong id="yapeNombre">—</strong></div>
+  <div class="modal-plan-row"><span>Monto</span><strong id="yapeMonto">—</strong></div>
+  <div class="email-row" style="margin:14px 0 8px"><input type="text" id="yapeOp" placeholder="N° de operación de tu Yape" inputmode="numeric"></div>
+  <button class="btn btn-lime full-btn" id="yapeSend">Ya pagué, enviar comprobante</button>
+  <p class="modal-foot" id="yapeMsg">Activamos tu VIP cuando confirmamos el pago, normalmente en pocas horas.</p>
 </div></div>
 <script src="app.js"></script>
 </body>
