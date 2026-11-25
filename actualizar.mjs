@@ -1,9 +1,10 @@
-// Descarga precios del SISAP (MIDAGRI) y genera precios.json + historial.json.
-// Lo ejecuta GitHub Actions cada día (ver actualizar.yml). Equivale a tu actualizar.php.
 import * as cheerio from "cheerio";
 import fs from "node:fs";
+import { fetch, Agent } from "undici";
 
-const SISAP = "http://sistemas.midagri.gob.pe/sisap/portal2/ciudades";
+const dispatcher = new Agent({ connect: { timeout: 30000 }, headersTimeout: 180000, bodyTimeout: 180000 });
+
+let SISAP = "https://sistemas.midagri.gob.pe/sisap/portal2/ciudades"; // se prueba https y, si falla, http
 const DIAS = Number(process.env.DIAS || 30);
 const MAX_HISTORIAL_DIAS = 730; // 2 años
 const PRODUCTOS = { "0104": "Papa", "0401": "Arroz", "0212": "Cebolla", "0228": "Tomate", "0403": "Choclo" };
@@ -15,17 +16,17 @@ const fmt = d => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() 
 const cookies = new Map();
 
 async function pedir(url) {
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 4; i++) {
     try {
       const r = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; AgroPrecios/1.0)", "X-Requested-With": "XMLHttpRequest", Referer: SISAP + "/", Cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join("; ") },
-        signal: AbortSignal.timeout(180000)
+        dispatcher
       });
       for (const c of r.headers.getSetCookie?.() || []) { const [kv] = c.split(";"); const [k, ...v] = kv.split("="); cookies.set(k, v.join("=")); }
       if (!r.ok) throw new Error("HTTP " + r.status);
       return new TextDecoder("iso-8859-1").decode(await r.arrayBuffer());
     } catch (e) {
-      if (i === 3) throw e;
+      if (i === 4) throw e;
       await new Promise(res => setTimeout(res, 5000));
     }
   }
@@ -80,7 +81,12 @@ function registro(producto, variedad, region, tipo, precio, fecha) {
 const hasta = new Date(); const desde = new Date(Date.now() - DIAS * 864e5);
 const registros = []; const historialNuevo = [];
 
-await pedir(SISAP + "/"); // abre sesión
+try { await pedir(SISAP + "/"); } // abre sesión
+catch (e) {
+  console.log("Falló https (" + (e.cause?.code || e.message) + "), probando http…");
+  SISAP = SISAP.replace("https://", "http://"); cookies.clear();
+  await pedir(SISAP + "/");
+}
 for (const [codigo, producto] of Object.entries(PRODUCTOS)) {
   process.stdout.write(`Consultando ${producto}... `);
   let pts = [];
