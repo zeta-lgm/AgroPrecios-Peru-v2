@@ -5,28 +5,32 @@ on:
   workflow_dispatch:
     inputs:
       dias:
-        description: "Días hacia atrás (30 normal; 730 para llenar el historial)"
+        description: "Días hacia atrás (30 normal; luego 180, 365 y 730)"
         default: "30"
 permissions:
   contents: write
 jobs:
   actualizar:
     runs-on: self-hosted
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@v4
-      - run: npm install cheerio@1.0.0 undici@6
-      - run: node actualizar.mjs
+      - name: Instalar dependencias
+        shell: powershell
+        run: npm install cheerio@1.0.0 undici@6
+      - name: Descargar precios
+        shell: powershell
+        run: node actualizar.mjs
         env:
           DIAS: ${{ inputs.dias || '30' }}
       - name: Guardar cambios
+        shell: powershell
         run: |
+          $ErrorActionPreference = "Continue"
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add precios.json historial.json
-          if ! git diff --staged --quiet; then
+          git diff --staged --quiet
+          if ($LASTEXITCODE -ne 0) {
             git commit -m "Actualizar precios"
             git push
-          fi
+          }
