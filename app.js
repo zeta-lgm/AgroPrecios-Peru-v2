@@ -7,7 +7,7 @@ const num = v => v !== null && v !== undefined && Number.isFinite(Number(v));
 const uniq = (arr, k) => [...new Set(arr.map(r => r[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
 
 let records = [], history = [], priceChart = null, histChart = null;
-let sb = null, user = null, vip = false;
+let sb = null, user = null, vip = false, memb = null;
 
 /* ---------- Datos ---------- */
 async function getJson(url) {
@@ -122,10 +122,15 @@ function drawHistory() {
 }
 function applyPlanUI() {
   $("planPill").textContent = vip ? "VIP activo" : "Plan gratis";
+  $("chipBadge").textContent = vip ? "VIP" : "Gratis"; $("chipBadge").classList.toggle("vip", vip);
   $("userPlan").textContent = user ? (vip ? "VIP activo" : "Cuenta gratuita") : "Plan gratuito";
   [...$("hRange").options].forEach(o => { o.textContent = o.textContent.replace("🔒 ", ""); if (!vip && Number(o.value) > (C.DIAS_GRATIS || 30)) o.textContent = "🔒 " + o.textContent; });
   $("hRegion2").disabled = !vip; $("lockNote").hidden = vip; $("hCsv").textContent = vip ? "⬇ Descargar CSV" : "⬇ Descargar CSV (VIP)";
   $("signupStrip").hidden = !!user;
+  const dias = vip && memb ? Math.ceil((new Date(memb.vence) - Date.now()) / 864e5) : 0;
+  $("topVip").hidden = vip; $("analisis").hidden = vip; $("vipStatus").hidden = !vip;
+  if (vip) $("vipStatus").innerHTML = `⭐ <strong>Eres VIP</strong> · vence el ${new Date(memb.vence).toLocaleDateString("es-PE")}` + (dias <= 7 ? ` (en ${dias} día${dias === 1 ? "" : "s"}: renueva para no perder el acceso)` : "");
+  document.querySelectorAll(".plan-card .vipCheckout").forEach(b => { b.dataset.t ||= b.textContent; b.textContent = vip ? b.dataset.t.replace("Elegir", "Renovar") : b.dataset.t; });
   if (!vip) $("hRange").value = String(C.DIAS_GRATIS || 30);
   drawHistory();
 }
@@ -147,17 +152,53 @@ async function loadMembership() {
     if (sb && user) {
       const { data, error } = await sb.from("membresias").select("vence").eq("user_id", user.id).maybeSingle();
       if (error) console.error("membresias:", error.message);
+      memb = data || null;
       vip = !!(data && new Date(data.vence) > new Date());
+      if (vip) {
+        try {
+          if (localStorage.getItem("agroVip") !== data.vence) {
+            localStorage.setItem("agroVip", data.vence);
+            toast("⭐ ¡Tu VIP está activo! Ya tienes historial de hasta 2 años y más herramientas.");
+          }
+        } catch {}
+      }
     }
   } catch (e) { console.error(e); }
   applyPlanUI();
 }
+const userName = u => u?.user_metadata?.full_name || (u?.email ? u.email.split("@")[0] : "Invitado");
 function setUser(u) {
   user = u;
-  const name = u?.user_metadata?.full_name || u?.email || "Invitado";
-  $("userName").textContent = name; $("userAvatar").textContent = u ? name.slice(0, 2).toUpperCase() : "AP";
+  const name = userName(u);
+  $("userName").textContent = u?.user_metadata?.full_name || u?.email || "Invitado";
+  $("userAvatar").textContent = u ? name.slice(0, 1).toUpperCase() : "AP";
   $("authButton").textContent = u ? "↪" : "↗"; $("authButton").title = u ? "Cerrar sesión" : "Iniciar sesión";
-  $("topLogin").textContent = u ? "Mi cuenta" : "Iniciar sesión";
+  $("userChip").hidden = !u; $("topLogin").hidden = !!u;
+  if (u) { $("chipAvatar").textContent = name.slice(0, 1).toUpperCase(); $("chipName").textContent = name; }
+}
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 6000);
+}
+function welcome(u) {
+  if (!u || sessionStorage.getItem("agroWelcome")) return;
+  sessionStorage.setItem("agroWelcome", "1");
+  closeModal("authModal");
+  toast("✅ ¡Listo! Tu cuenta quedó registrada. Bienvenido, " + userName(u) + ".");
+}
+function openAccount() {
+  const name = userName(user);
+  $("accAvatar").textContent = name.slice(0, 1).toUpperCase();
+  $("accName").textContent = name; $("accEmail").textContent = user.email || "—";
+  $("accPlan").textContent = vip ? "VIP activo" : "Gratis";
+  $("accVence").textContent = vip && memb ? new Date(memb.vence).toLocaleDateString("es-PE") : "—";
+  $("accVip").hidden = vip;
+  openModal("accountModal");
+}
+async function logout() {
+  try { if (sb) await sb.auth.signOut(); } catch (e) { console.error(e); }
+  sessionStorage.removeItem("agroWelcome"); setUser(null); memb = null; await loadMembership();
+  closeModal("accountModal"); toast("Sesión cerrada.");
 }
 async function login() {
   if (!sb) { $("authMessage").textContent = "El registro con Google aún no está configurado (falta Supabase en config.js)."; openModal("authModal"); return; }
@@ -169,6 +210,7 @@ function checkout(plan) {
   const url = plan === "annual" ? C.PAGO_ANUAL : C.PAGO_MENSUAL;
   const nombre = plan === "annual" ? "VIP anual (S/ 70)" : "VIP mensual (S/ 7)";
   if (url) { window.open(url + (url.includes("?") ? "&" : "?") + "email=" + encodeURIComponent(user.email), "_blank"); return; }
+  if (C.YAPE_NUMERO) { openYape(plan); return; }
   if (C.WHATSAPP) {
     const msg = `Hola, quiero el plan ${nombre} de AgroPrecios Perú. Mi correo: ${user.email}`;
     window.open(`https://wa.me/${C.WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank"); return;
@@ -215,6 +257,27 @@ function ask() {
   else out.textContent = "Puedes preguntar por el precio más alto, más bajo o el promedio, indicando producto, región o tipo (mayorista/minorista).";
 }
 
+/* ---------- Pago con Yape (manual) ---------- */
+let yapePlan = "monthly";
+function openYape(plan) {
+  yapePlan = plan;
+  const annual = plan === "annual";
+  $("yapeTitle").textContent = annual ? "VIP anual" : "VIP mensual";
+  $("yapeMonto").textContent = annual ? "S/ 70" : "S/ 7";
+  $("yapeNum").textContent = C.YAPE_NUMERO;
+  $("yapeNombre").textContent = C.YAPE_NOMBRE || "—";
+  $("yapeOp").value = "";
+  closeModal("vipModal"); openModal("yapeModal");
+}
+function sendYape() {
+  const op = $("yapeOp").value.trim();
+  if (op.length < 5) { $("yapeMsg").textContent = "Escribe el número de operación que aparece en tu constancia de Yape."; return; }
+  const nombre = yapePlan === "annual" ? "VIP anual (S/ 70)" : "VIP mensual (S/ 7)";
+  const msg = `Pagué ${nombre} por Yape. N° de operación: ${op}. Mi correo en AgroPrecios: ${user?.email || "—"}`;
+  if (C.WHATSAPP) { window.open(`https://wa.me/${C.WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank"); $("yapeMsg").textContent = "✓ Comprobante enviado. Te activaremos en cuanto confirmemos el pago."; }
+  else $("yapeMsg").textContent = "Guarda tu N° de operación (" + op + ") y envíalo al contacto indicado por el administrador.";
+}
+
 /* ---------- UI ---------- */
 function openModal(id) { $(id).hidden = false; }
 function closeModal(id) { $(id).hidden = true; }
@@ -233,11 +296,15 @@ async function boot() {
   ["topVip", "bannerVip", "lockVip"].forEach(id => on(id, "click", () => openModal("vipModal")));
   document.querySelectorAll(".vipCheckout").forEach(b => b.addEventListener("click", () => checkout(b.dataset.plan)));
   on("topLogin", "click", () => openModal("authModal"));
-  on("authButton", "click", async () => { if (user && sb) { await sb.auth.signOut(); setUser(null); await loadMembership(); } else openModal("authModal"); });
+  on("authButton", "click", () => { if (user) logout(); else openModal("authModal"); });
+  on("userChip", "click", openAccount);
+  on("accLogout", "click", logout);
+  on("accVip", "click", () => { closeModal("accountModal"); openModal("vipModal"); });
   on("googleLogin", "click", login);
   on("stripBtn", "click", () => emailLogin("stripEmail", "stripMsg"));
   on("modalBtn", "click", () => emailLogin("modalEmail", "authMessage"));
   on("googleLogin2", "click", login);
+  on("yapeSend", "click", sendYape);
   on("aiBtn", "click", ask);
   on("aiQ", "keydown", e => { if (e.key === "Enter") ask(); });
   on("hCsv", "click", downloadCsv);
@@ -250,11 +317,16 @@ async function boot() {
     if (configured()) {
       sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
       const { data } = await Promise.race([sb.auth.getSession(), new Promise(r => setTimeout(() => r({ data: {} }), 4000))]);
-      setUser(data.session?.user || null);
+      setUser(data.session?.user || null); welcome(data.session?.user);
       // Importante: no llamar a Supabase dentro del callback (se cuelga); se difiere con setTimeout.
-      sb.auth.onAuthStateChange((_e, s) => { setUser(s?.user || null); setTimeout(loadMembership, 0); });
+      sb.auth.onAuthStateChange((ev, s) => {
+        setUser(s?.user || null);
+        if (ev === "SIGNED_IN") welcome(s?.user);
+        setTimeout(loadMembership, 0);
+      });
     }
   } catch (e) { console.error("Supabase:", e); sb = null; }
   await loadMembership();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && user) loadMembership(); });
 }
 boot();
