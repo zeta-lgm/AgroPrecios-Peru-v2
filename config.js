@@ -5,6 +5,9 @@ window.CONFIG = {
   // Enlace de pago (Mercado Pago / link de pago / WhatsApp con Yape) para cada plan:
   PAGO_MENSUAL: "",
   PAGO_ANUAL: "",
+  YAPE_NUMERO: "936 698 076",
+  YAPE_NOMBRE: "Nancy Gutierrez",
+  WHATSAPP: "51936698076",  
   DIAS_GRATIS: 30,     // historial visible en el plan gratis
   DIAS_VIP: 730        // máximo 2 años en VIP
 };
