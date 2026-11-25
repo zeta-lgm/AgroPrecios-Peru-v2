@@ -1,5 +1,6 @@
 const C = window.CONFIG || {};
 const $ = id => document.getElementById(id);
+const on = (id, ev, fn) => { const e = $(id); if (e) e.addEventListener(ev, fn); };
 const money = v => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(v);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const num = v => v !== null && v !== undefined && Number.isFinite(Number(v));
@@ -142,10 +143,13 @@ function downloadCsv() {
 const configured = () => C.SUPABASE_URL && C.SUPABASE_URL.startsWith("https://") && !C.SUPABASE_URL.includes("TU-PROYECTO") && window.supabase;
 async function loadMembership() {
   vip = false;
-  if (sb && user) {
-    const { data } = await sb.from("membresias").select("vence").eq("user_id", user.id).maybeSingle();
-    vip = !!(data && new Date(data.vence) > new Date());
-  }
+  try {
+    if (sb && user) {
+      const { data, error } = await sb.from("membresias").select("vence").eq("user_id", user.id).maybeSingle();
+      if (error) console.error("membresias:", error.message);
+      vip = !!(data && new Date(data.vence) > new Date());
+    }
+  } catch (e) { console.error(e); }
   applyPlanUI();
 }
 function setUser(u) {
@@ -161,10 +165,16 @@ async function login() {
   if (error) $("authMessage").textContent = error.message;
 }
 function checkout(plan) {
-  if (!user) { $("authMessage").textContent = "Primero inicia sesión con Google para vincular tu membresía."; closeModal("vipModal"); openModal("authModal"); return; }
+  if (!user) { $("authMessage").textContent = "Primero inicia sesión para vincular tu membresía."; closeModal("vipModal"); openModal("authModal"); return; }
   const url = plan === "annual" ? C.PAGO_ANUAL : C.PAGO_MENSUAL;
-  if (!url) { $("paymentMessage").textContent = "El enlace de pago aún no está configurado. No se realizó ningún cobro."; openModal("vipModal"); return; }
-  window.open(url + (url.includes("?") ? "&" : "?") + "email=" + encodeURIComponent(user.email), "_blank");
+  const nombre = plan === "annual" ? "VIP anual (S/ 70)" : "VIP mensual (S/ 7)";
+  if (url) { window.open(url + (url.includes("?") ? "&" : "?") + "email=" + encodeURIComponent(user.email), "_blank"); return; }
+  if (C.WHATSAPP) {
+    const msg = `Hola, quiero el plan ${nombre} de AgroPrecios Perú. Mi correo: ${user.email}`;
+    window.open(`https://wa.me/${C.WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank"); return;
+  }
+  $("paymentMessage").textContent = "El método de pago aún no está configurado. No se realizó ningún cobro.";
+  openModal("vipModal");
 }
 
 /* ---------- Acceso por correo ---------- */
@@ -210,37 +220,41 @@ function openModal(id) { $(id).hidden = false; }
 function closeModal(id) { $(id).hidden = true; }
 
 async function boot() {
-  if (configured()) {
-    sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
-    const { data } = await sb.auth.getSession();
-    setUser(data.session?.user || null);
-    sb.auth.onAuthStateChange(async (_e, s) => { setUser(s?.user || null); await loadMembership(); });
-  }
   await loadData();
-  await loadMembership();
 
-  ["productFilter", "regionFilter", "typeFilter"].forEach(id => $(id).addEventListener("change", render));
-  $("chartProduct").addEventListener("change", drawRegional);
-  ["hProduct", "hRegion", "hRegion2", "hType"].forEach(id => $(id).addEventListener("change", drawHistory));
-  $("hRange").addEventListener("change", () => {
+  ["productFilter", "regionFilter", "typeFilter"].forEach(id => on(id, "change", render));
+  on("chartProduct", "change", drawRegional);
+  ["hProduct", "hRegion", "hRegion2", "hType"].forEach(id => on(id, "change", drawHistory));
+  on("hRange", "change", () => {
     if (!vip && Number($("hRange").value) > (C.DIAS_GRATIS || 30)) { $("hRange").value = String(C.DIAS_GRATIS || 30); openModal("vipModal"); }
     drawHistory();
   });
-  $("clearFilters").addEventListener("click", () => { ["productFilter", "regionFilter", "typeFilter"].forEach(id => $(id).value = ""); render(); });
-  ["topVip", "bannerVip", "lockVip"].forEach(id => $(id).addEventListener("click", () => openModal("vipModal")));
+  on("clearFilters", "click", () => { ["productFilter", "regionFilter", "typeFilter"].forEach(id => $(id).value = ""); render(); });
+  ["topVip", "bannerVip", "lockVip"].forEach(id => on(id, "click", () => openModal("vipModal")));
   document.querySelectorAll(".vipCheckout").forEach(b => b.addEventListener("click", () => checkout(b.dataset.plan)));
-  $("topLogin").addEventListener("click", () => openModal("authModal"));
-  $("authButton").addEventListener("click", async () => { if (user && sb) { await sb.auth.signOut(); setUser(null); await loadMembership(); } else openModal("authModal"); });
-  $("googleLogin").addEventListener("click", login);
-  $("stripBtn").addEventListener("click", () => emailLogin("stripEmail", "stripMsg"));
-  $("modalBtn").addEventListener("click", () => emailLogin("modalEmail", "authMessage"));
-  $("aiBtn").addEventListener("click", ask);
-  $("aiQ").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
-  $("hCsv").addEventListener("click", downloadCsv);
-  $("freePlanBtn").addEventListener("click", () => scrollTo({ top: 0, behavior: "smooth" }));
+  on("topLogin", "click", () => openModal("authModal"));
+  on("authButton", "click", async () => { if (user && sb) { await sb.auth.signOut(); setUser(null); await loadMembership(); } else openModal("authModal"); });
+  on("googleLogin", "click", login);
+  on("stripBtn", "click", () => emailLogin("stripEmail", "stripMsg"));
+  on("modalBtn", "click", () => emailLogin("modalEmail", "authMessage"));
+  on("googleLogin2", "click", login);
+  on("aiBtn", "click", ask);
+  on("aiQ", "keydown", e => { if (e.key === "Enter") ask(); });
+  on("hCsv", "click", downloadCsv);
+  on("freePlanBtn", "click", () => scrollTo({ top: 0, behavior: "smooth" }));
   document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.dataset.close)));
   document.querySelectorAll(".modal-backdrop").forEach(b => b.addEventListener("click", e => { if (e.target === b) b.hidden = true; }));
-  $("mobileMenu").addEventListener("click", () => $("sidebar").classList.toggle("open"));
+  on("mobileMenu", "click", () => $("sidebar").classList.toggle("open"));
   document.querySelectorAll(".nav-link").forEach(l => l.addEventListener("click", () => $("sidebar").classList.remove("open")));
+  try {
+    if (configured()) {
+      sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
+      const { data } = await Promise.race([sb.auth.getSession(), new Promise(r => setTimeout(() => r({ data: {} }), 4000))]);
+      setUser(data.session?.user || null);
+      // Importante: no llamar a Supabase dentro del callback (se cuelga); se difiere con setTimeout.
+      sb.auth.onAuthStateChange((_e, s) => { setUser(s?.user || null); setTimeout(loadMembership, 0); });
+    }
+  } catch (e) { console.error("Supabase:", e); sb = null; }
+  await loadMembership();
 }
 boot();
